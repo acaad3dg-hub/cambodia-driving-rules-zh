@@ -1,0 +1,84 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cambodia Driving Rules 中英对照</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,system-ui,"PingFang SC","Microsoft YaHei",sans-serif;background:#f2f4f7;color:#222}
+header{background:#0b4ea2;color:#fff;padding:12px 14px;position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px}
+header button{background:none;border:0;color:#fff;font-size:20px}header h1{font-size:16px;margin:0;flex:1}
+main{max-width:640px;margin:0 auto;padding:12px}
+.card{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px #0001}
+.tile{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.zh{color:#555;font-size:.93em;margin-top:3px}.muted{color:#888;font-size:13px}
+.bar{height:5px;background:#e5e8ee;border-radius:3px;margin-top:8px}.bar i{display:block;height:100%;background:#2e9d5b;border-radius:3px}
+h2{font-size:15px;margin:16px 4px 8px;color:#0b4ea2}
+.opt{display:block;width:100%;text-align:left;border:2px solid #dde2ea;background:#fff;border-radius:10px;padding:10px 12px;margin:8px 0;font-size:15px;cursor:pointer}
+.opt.ok{border-color:#2e9d5b;background:#e9f7ef}.opt.bad{border-color:#d33;background:#fdecec}.opt.sel{border-color:#0b4ea2;background:#eaf1fb}
+.q{font-size:17px;font-weight:600}.img{text-align:center}.img img{max-width:200px;max-height:200px;margin:10px auto}
+.nav{display:flex;gap:8px;align-items:center;margin-top:10px}.nav button,.btn{padding:10px 14px;border-radius:10px;border:0;background:#0b4ea2;color:#fff;font-size:15px}
+.nav input{width:70px;padding:9px;border:1px solid #ccc;border-radius:8px}.btn.g{background:#6b7280}.btn.r{background:#c0392b}
+.fb{margin-top:8px;font-weight:600}.fb.ok{color:#2e9d5b}.fb.bad{color:#c0392b}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px}.grid span{padding:7px 0;text-align:center;border-radius:6px;background:#e5e8ee;font-size:13px;cursor:pointer}
+.grid .a{background:#cfe0f7}.grid .ok{background:#bfe8cf}.grid .bad{background:#f6c4c4}.grid .cur{outline:2px solid #0b4ea2}
+.timer{font-variant-numeric:tabular-nums}
+</style></head><body>
+<header><button id="back" onclick="go('#/')">⌂</button><h1 id="title">Cambodia Driving Rules · 柬埔寨驾驶理论</h1><span id="timer" class="timer"></span></header>
+<main id="app">Loading…</main>
+<script>
+let D,S=JSON.parse(localStorage.getItem('cdr')||'{}');S.done=S.done||{};S.wrong=S.wrong||{};S.pos=S.pos||{};S.hist=S.hist||[];
+const save=()=>localStorage.setItem('cdr',JSON.stringify(S)),$=id=>document.getElementById(id),L='ABC';
+const bi=(p,cls='')=>`<div class="${cls}">${esc(p[0])}</div><div class="zh">${esc(p[1])}</div>`;
+const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]);
+let QI={},exam=null,tick=null;
+let IM={};Promise.all([fetch('data.json').then(r=>r.json()),fetch('images.json').then(r=>r.json()).catch(()=>({}))]).then(([d,im])=>{D=d;IM=im;d.qs.forEach(q=>QI[q.id]=q);window.onhashchange=route;route()});
+function go(h){location.hash=h}
+function setTitle(t){$('title').textContent=t}
+function route(){const h=location.hash.slice(2).split('/');if(h[0]!=='exam'||!exam){clearInterval(tick);$('timer').textContent=''}
+ if(h[0]==='cat')practice(D.qs.filter(q=>q.c==h[1]),'c'+h[1],D.cats.find(c=>c.id==h[1]));
+ else if(h[0]==='wrong')practice(D.qs.filter(q=>S.wrong[q.id]),'w',{en:'Wrong answers',zh:'错题本'});
+ else if(h[0]==='exam'&&exam)renderExam();else if(h[0]==='result'&&exam)result();else home()}
+function home(){setTitle('Cambodia Driving Rules · 柬埔寨驾驶理论');exam=null;
+ let h='<h2>Practice by category · 分类练习</h2>';
+ D.cats.forEach(c=>{const qs=D.qs.filter(q=>q.c==c.id),n=qs.filter(q=>S.done[q.id]!==undefined).length;
+  h+=`<div class="card tile" onclick="go('#/cat/${c.id}')"><div><div><b>${c.en}</b></div><div class="zh">${c.zh}</div><div class="muted">${n}/${qs.length} done 已做</div><div class="bar"><i style="width:${100*n/qs.length}%"></i></div></div><div class="muted">${qs.length} ›</div></div>`});
+ const w=Object.keys(S.wrong).length;
+ h+=`<h2>Wrong-answer notebook · 错题本</h2><div class="card tile" onclick="${w?"go('#/wrong')":''}"><div><b>Wrong answers</b><div class="zh">错题本</div></div><div class="muted">${w} ›</div></div>`;
+ h+='<h2>Mock exam · 模拟考试</h2>';
+ D.games.forEach((g,i)=>h+=`<div class="card tile" onclick="startExam(${i})"><div><b>Licence class ${g.name}</b><div class="zh">${g.name} 类驾照模拟考</div><div class="muted">${g.n} questions 题 · pass 及格 ${g.pass} · ${g.dur/60} min 分钟</div></div><div>›</div></div>`);
+ if(S.hist.length)h+='<h2>Exam history · 考试记录</h2><div class="card">'+S.hist.slice(-10).reverse().map(x=>`<div class="muted">${x.d} · ${x.g} · ${x.s}/${x.n} ${x.p?'✅ PASS 通过':'❌ FAIL 未通过'}</div>`).join('')+'</div>';
+ h+=`<div class="card muted">Content from the official MPWT app “Cambodia Driving Rules” (577 questions). Chinese is a translation for reference — if in doubt, follow the English. 柬埔寨靠右行驶。<br><button class="btn g" style="margin-top:8px" onclick="if(confirm('Reset all progress? 清除所有进度？')){localStorage.removeItem('cdr');location.reload()}">Reset progress 重置进度</button></div>`;
+ $('app').innerHTML=h;scrollTo(0,0)}
+function qCard(q,idx,total,chosen,reveal){let h=`<div class="card"><div class="muted">${idx+1} / ${total} · ID ${q.id}</div>${bi(q.q,'q')}`;
+ if(q.img)h+=`<div class="img"><img src="${IM[q.id]||q.img}" alt="sign"></div>`;
+ q.o.forEach((o,i)=>{let c='';if(reveal){if(i===q.a)c='ok';else if(i===chosen)c='bad'}else if(i===chosen)c='sel';
+  h+=`<button class="opt ${c}" data-i="${i}">${L[i]}. ${esc(o[0])}<div class="zh">${esc(o[1])}</div></button>`});
+ if(reveal&&chosen!==undefined)h+=chosen===q.a?'<div class="fb ok">✔ Correct 正确</div>':`<div class="fb bad">✘ Wrong 错误 — Answer 正确答案: ${L[q.a]}. ${esc(q.o[q.a][0])}<div class="zh">${esc(q.o[q.a][1])}</div></div>`;
+ return h+'</div>'}
+function practice(qs,key,cat){setTitle(cat.en+' · '+cat.zh);let i=Math.min(S.pos[key]||0,qs.length-1);const sess={};
+ function draw(){if(!qs.length){$('app').innerHTML='<div class="card">No questions 暂无题目</div>';return}
+  const q=qs[i],ch=sess[q.id];S.pos[key]=i;save();
+  let h=qCard(q,i,qs.length,ch,ch!==undefined);
+  h+=`<div class="nav"><button onclick="P(-1)">‹ Prev</button><button onclick="P(1)">Next ›</button><input id="jump" type="number" min="1" max="${qs.length}" placeholder="#"><button class="btn g" onclick="J()">Go 跳转</button></div>`;
+  if(key==='w'&&S.wrong[q.id])h+=`<div class="nav"><button class="btn r" onclick="RM()">Remove from notebook 移出错题本</button></div>`;
+  h+='<div class="card" style="margin-top:10px"><div class="grid">'+qs.map((x,j)=>`<span class="${j===i?'cur ':''}${sess[x.id]!==undefined?(sess[x.id]===x.a?'ok':'bad'):(S.done[x.id]!==undefined?'a':'')}" onclick="JJ(${j})">${j+1}</span>`).join('')+'</div></div>';
+  $('app').innerHTML=h;
+  if(ch===undefined)document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const c=+b.dataset.i;sess[q.id]=c;S.done[q.id]=c===q.a?1:0;if(c!==q.a)S.wrong[q.id]=1;save();draw()})}
+ window.P=d=>{i=Math.max(0,Math.min(qs.length-1,i+d));draw();scrollTo(0,0)};window.JJ=j=>{i=j;draw();scrollTo(0,0)};
+ window.J=()=>{const v=+$('jump').value;if(v>=1&&v<=qs.length)JJ(v-1)};window.RM=()=>{delete S.wrong[qs[i].id];save();qs.splice(i,1);i=Math.min(i,qs.length-1);draw()};draw()}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function startExam(gi){const g=D.games[gi];let qs=[];
+ g.per.forEach((n,ci)=>{qs=qs.concat(shuffle(D.qs.filter(q=>q.c===ci+1)).slice(0,n))});
+ exam={g,qs,ans:{},i:0,end:Date.now()+g.dur*1000};go('#/exam')}
+function renderExam(){const e=exam;setTitle('Mock exam '+e.g.name+' · 模拟考试');clearInterval(tick);
+ const t=()=>{const s=Math.max(0,(e.end-Date.now())/1000|0);$('timer').textContent=`${s/60|0}:${String(s%60).padStart(2,'0')}`;if(s<=0){clearInterval(tick);finish()}};t();tick=setInterval(t,1000);
+ const q=e.qs[e.i];let h=qCard(q,e.i,e.qs.length,e.ans[q.id],false);
+ h+=`<div class="nav"><button onclick="EX(-1)">‹ Prev</button><button onclick="EX(1)">Next ›</button><button class="btn r" onclick="if(confirm('Submit exam? 交卷？'))finish()">Submit 交卷</button></div>`;
+ h+='<div class="card" style="margin-top:10px"><div class="grid">'+e.qs.map((x,j)=>`<span class="${j===e.i?'cur ':''}${e.ans[x.id]!==undefined?'a':''}" onclick="exam.i=${j};renderExam()">${j+1}</span>`).join('')+'</div></div>';
+ $('app').innerHTML=h;document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{e.ans[q.id]=+b.dataset.i;if(e.i<e.qs.length-1)e.i++;renderExam()})}
+window.EX=d=>{exam.i=Math.max(0,Math.min(exam.qs.length-1,exam.i+d));renderExam()};
+function finish(){clearInterval(tick);$('timer').textContent='';const e=exam;if(e.score===undefined){e.score=e.qs.filter(q=>e.ans[q.id]===q.a).length;
+ e.qs.forEach(q=>{const c=e.ans[q.id];if(c!==undefined)S.done[q.id]=c===q.a?1:0;if(c!==q.a)S.wrong[q.id]=1});
+ S.hist.push({d:new Date().toLocaleString(),g:e.g.name,s:e.score,n:e.qs.length,p:e.score>=e.g.pass});save()}go('#/result')}
+function result(){const e=exam,p=e.score>=e.g.pass;setTitle('Result · 成绩');
+ let h=`<div class="card" style="text-align:center"><div style="font-size:40px">${p?'✅':'❌'}</div><div class="q">${e.score} / ${e.qs.length}</div><div>${p?'PASS 通过':'FAIL 未通过'} (pass 及格线 ${e.g.pass})</div><div class="nav" style="justify-content:center"><button onclick="startExam(D.games.indexOf(exam.g))">Retry 再考</button><button class="btn g" onclick="go('#/')">Home 首页</button></div></div><h2>Mistakes · 错题回顾 (${e.qs.length-e.score})</h2>`;
+ e.qs.forEach((q,i)=>{if(e.ans[q.id]!==q.a)h+=qCard(q,i,e.qs.length,e.ans[q.id],true)+(e.ans[q.id]===undefined?'':'')});
+ $('app').innerHTML=h;scrollTo(0,0)}
+</script></body></html>
